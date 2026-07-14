@@ -189,4 +189,4 @@ async function handleQuery(event) {
   });
 }
 
-module.exports = { handleQuery };
+exports.handler = handleQuery;

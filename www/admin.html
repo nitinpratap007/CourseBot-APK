@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Course Recommender</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">CourseBot Admin</a>
+        <nav style="display: flex; gap: 1.5rem; align-items: center;">
+            <a href="index.html">Home</a>
+            <a href="student.html">Student Portal</a>
+            <a href="admin.html" class="active">Admin Dashboard</a>
+            <button id="logout-btn" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+            <h2>Course Management</h2>
+            <form id="add-course-form" class="flex-row" style="align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                    <label for="course-name">Course Name</label>
+                    <input type="text" id="course-name" required>
+                </div>
+                <div class="form-group" style="flex: 2; min-width: 300px; margin-bottom: 0;">
+                    <label for="course-desc">Description</label>
+                    <input type="text" id="course-desc" required>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                    <label for="course-cat">Category</label>
+                    <input type="text" id="course-cat" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-bottom: 0;">Add Course</button>
+            </form>
+
+            <div style="overflow-x: auto; margin-top: 2rem;">
+                <table id="courses-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-panel" style="padding: 2rem;">
+            <h2>Recent Student Queries</h2>
+            <div style="overflow-x: auto;">
+                <table id="queries-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Student</th>
+                            <th>Question</th>
+                            <th>Bot Answer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

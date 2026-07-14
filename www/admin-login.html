@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Course Recommender</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">CourseBot Admin</a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="student.html">Student Portal</a>
+            <a href="admin.html" class="active">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="container" style="display: flex; align-items: center; justify-content: center;">
+        <div class="glass-panel" style="padding: 3rem; width: 100%; max-width: 400px;">
+            <h2 class="text-center">Admin Login</h2>
+            <p class="text-center mb-2" style="font-size: 0.9rem;">Please enter the dashboard password to continue.</p>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter admin password">
+                </div>
+                <div id="login-error" style="color: var(--danger-color); font-size: 0.85rem; margin-bottom: 1rem; display: none;"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script src="admin-login.js"></script>
+</body>
+</html>

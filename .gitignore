@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+/platforms/
+/plugins/
+.gradle/
+*.apk
+*.log
+CourseBot-debug.apk

@@ -1,0 +1,32 @@
+[build]
+  publish = "www"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = []
+
+[[redirects]]
+  from = "/api/query"
+  to = "/.netlify/functions/query"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/login"
+  to = "/.netlify/functions/login"
+  status = 200
+
+[[redirects]]
+  from = "/api/courses"
+  to = "/.netlify/functions/courses"
+  status = 200
+
+[[redirects]]
+  from = "/api/courses/:id"
+  to = "/.netlify/functions/courses"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/queries"
+  to = "/.netlify/functions/admin-queries"
+  status = 200

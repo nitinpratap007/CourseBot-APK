@@ -1,4 +1,4 @@
--- CourseBot Database Schema for Supabase
+-- NitinChatBot Database Schema for Supabase
 -- Run this in the Supabase SQL Editor (https://supabase.com/dashboard)
 
 -- 1. Courses table

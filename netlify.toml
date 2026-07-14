@@ -1,6 +1,7 @@
 [build]
   publish = "www"
   functions = "netlify/functions"
+  command = "npm install"
 
 [functions]
   node_bundler = "esbuild"

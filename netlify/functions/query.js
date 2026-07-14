@@ -54,7 +54,7 @@ const CATEGORY_LABELS = {
 
 function generateGreeting() {
   const responses = [
-    "Hello! Welcome to **CourseBot**! 🎓\n\nI can recommend courses based on your interests. Try asking me about:\n\n- **Frontend** - React, HTML/CSS, JavaScript\n- **Backend** - Node.js, Python, APIs\n- **Data Science** - Machine Learning, Python\n- **Database** - SQL, MongoDB\n- **Mobile** - Flutter, React Native\n- **DevOps** - Docker, AWS, Cloud\n\nWhat are you interested in learning?",
+    "Hello! Welcome to **NitinChatBot**! 🎓\n\nI can recommend courses based on your interests. Try asking me about:\n\n- **Frontend** - React, HTML/CSS, JavaScript\n- **Backend** - Node.js, Python, APIs\n- **Data Science** - Machine Learning, Python\n- **Database** - SQL, MongoDB\n- **Mobile** - Flutter, React Native\n- **DevOps** - Docker, AWS, Cloud\n\nWhat are you interested in learning?",
     "Hey there! 👋\n\nI'm your course recommendation assistant. Tell me what topic or technology you're interested in, and I'll suggest the best courses for you!\n\nFor example, try: *\"I want to learn React\"* or *\"Recommend a Python course\"*",
   ];
   return responses[Math.floor(Math.random() * responses.length)];

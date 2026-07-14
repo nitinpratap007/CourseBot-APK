@@ -1,6 +1,6 @@
 {
   "name": "com.coursebot.app",
-  "displayName": "CourseBot",
+  "displayName": "NitinChatBot",
   "version": "1.0.0",
   "description": "AI-powered course recommendation chatbot",
   "main": "index.js",

@@ -1,4 +1,3 @@
-const https = require('https');
 const { getSupabase } = require('./_lib/supabase');
 const { corsResponse, handleCors } = require('./_lib/cors');
 
@@ -16,17 +15,16 @@ const GREETINGS = ['hello', 'hi', 'hey', 'good morning', 'good evening', 'good a
 const HELP_KEYWORDS = ['help', 'what can you do', 'how does this work', 'options', 'features'];
 const THANKS = ['thank', 'thanks', 'thx', 'ty', 'appreciate'];
 
-function callGeminiAPI(userMessage, courseContext) {
-  return new Promise((resolve, reject) => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('[Gemini] No GEMINI_API_KEY found in environment');
-      return reject(new Error('No Gemini API key'));
-    }
+async function callGeminiAPI(userMessage, courseContext) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error('[Gemini] No GEMINI_API_KEY found in environment');
+    throw new Error('No Gemini API key');
+  }
 
-    console.log('[Gemini] API key found, making request...');
+  console.log('[Gemini] API key found, making request...');
 
-    const systemPrompt = `You are NitinChatBot, a friendly and helpful course recommendation assistant. Your job is to recommend courses from the provided course catalog based on user questions.
+  const systemPrompt = `You are NitinChatBot, a friendly and helpful course recommendation assistant. Your job is to recommend courses from the provided course catalog based on user questions.
 
 Rules:
 - Always respond in markdown format
@@ -37,71 +35,41 @@ Rules:
 - Use emojis occasionally to be friendly
 - If the user asks about something unrelated to courses, politely redirect to course recommendations`;
 
-    const fullPrompt = `Course Catalog:\n${courseContext}\n\nUser Question: ${userMessage}`;
+  const fullPrompt = `Course Catalog:\n${courseContext}\n\nUser Question: ${userMessage}`;
 
-    const payload = JSON.stringify({
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+  console.log('[Gemini] Calling Gemini API...');
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       contents: [{ parts: [{ text: fullPrompt }] }],
       systemInstruction: { parts: [{ text: systemPrompt }] },
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 1024,
       },
-    });
-
-    const reqUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const urlObj = new URL(reqUrl);
-
-    const options = {
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-      },
-      timeout: 20000,
-    };
-
-    console.log('[Gemini] Calling:', `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=***`);
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        console.log('[Gemini] Response status:', res.statusCode);
-        try {
-          const json = JSON.parse(data);
-          if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text) {
-            console.log('[Gemini] Success! Response length:', json.candidates[0].content.parts[0].text.length);
-            resolve(json.candidates[0].content.parts[0].text);
-          } else if (json.error) {
-            console.error('[Gemini] API error:', JSON.stringify(json.error));
-            reject(new Error(json.error.message || JSON.stringify(json.error)));
-          } else {
-            console.error('[Gemini] Unexpected response:', JSON.stringify(json).substring(0, 500));
-            reject(new Error('Unexpected Gemini response'));
-          }
-        } catch (e) {
-          console.error('[Gemini] Parse error:', e.message, 'Raw data:', data.substring(0, 500));
-          reject(e);
-        }
-      });
-    });
-
-    req.on('timeout', () => {
-      console.error('[Gemini] Request timed out');
-      req.destroy();
-      reject(new Error('Gemini API request timed out'));
-    });
-
-    req.on('error', (err) => {
-      console.error('[Gemini] Request error:', err.message);
-      reject(err);
-    });
-
-    req.write(payload);
-    req.end();
+    }),
   });
+
+  console.log('[Gemini] Response status:', res.status);
+
+  const json = await res.json();
+
+  if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text) {
+    console.log('[Gemini] Success! Response length:', json.candidates[0].content.parts[0].text.length);
+    return json.candidates[0].content.parts[0].text;
+  }
+
+  if (json.error) {
+    console.error('[Gemini] API error:', JSON.stringify(json.error));
+    throw new Error(json.error.message || JSON.stringify(json.error));
+  }
+
+  console.error('[Gemini] Unexpected response:', JSON.stringify(json).substring(0, 500));
+  throw new Error('Unexpected Gemini response');
 }
 
 function extractKeywords(text) {

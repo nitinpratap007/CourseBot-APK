@@ -6,6 +6,7 @@
 [functions]
   node_bundler = "esbuild"
   included_files = []
+  timeout = 26
 
 [[redirects]]
   from = "/api/query"

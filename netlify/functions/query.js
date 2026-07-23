@@ -1,32 +1,58 @@
 const { getSupabase } = require('./_lib/supabase');
 const { corsResponse, handleCors } = require('./_lib/cors');
+const https = require('https');
 
-async function callGeminiAPI(userMessage, courseContext) {
+const SYSTEM_PROMPT = `You are NitinChatBot, a smart AI assistant powered by Gemini. You can answer ANY question like ChatGPT - math, science, coding, general knowledge, life advice, writing, translations, anything.
+
+You also have access to a course catalog. When a user asks about learning, courses, or a topic that matches a course in the catalog, recommend the relevant course(s) naturally.
+
+Rules:
+- Always respond in markdown format (use **bold**, lists, code blocks when needed)
+- Be conversational, friendly, and helpful like ChatGPT
+- Answer ALL questions - not just course-related ones
+- Use emojis occasionally
+- Keep responses concise but thorough
+- If you know the answer, give it directly. Only suggest courses when it makes sense.
+- For coding questions, use code blocks
+- For math, show your work step by step`;
+
+function callGemini(userMessage, courseCatalog) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('No GEMINI_API_KEY env var');
+  if (!apiKey) return Promise.reject(new Error('No GEMINI_API_KEY'));
 
-  const systemPrompt = `You are NitinChatBot, a friendly course recommendation assistant. Recommend courses from the provided catalog. Respond in markdown. Be conversational and helpful like ChatGPT. Use emojis. If no courses match, give general advice.`;
-
-  const fullPrompt = `${systemPrompt}\n\nCourse Catalog:\n${courseContext}\n\nUser: ${userMessage}\n\nAssistant:`;
+  const prompt = `Available Courses:\n${courseCatalog}\n\n---\n\nUser: ${userMessage}`;
 
   const payload = JSON.stringify({
-    contents: [{ parts: [{ text: fullPrompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: payload,
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'generativelanguage.googleapis.com',
+      path: '/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+      timeout: 25000,
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.error) return reject(new Error(json.error.message));
+          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return resolve(text);
+          reject(new Error('Empty response'));
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
   });
-
-  const json = await res.json();
-
-  if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('No text in response: ' + JSON.stringify(json).substring(0, 300));
-  return text;
 }
 
 async function handleQuery(event) {
@@ -41,36 +67,29 @@ async function handleQuery(event) {
 
   const supabase = getSupabase();
   let answer = '';
-  let debug = {};
 
   if (process.env.GEMINI_API_KEY) {
-    debug.keyLen = process.env.GEMINI_API_KEY.length;
     try {
       const { data: courses } = await supabase.from('courses').select('name, description, category').limit(20);
-      const ctx = courses && courses.length > 0
-        ? courses.map(c => `- ${c.name} (${c.category}): ${c.description}`).join('\n')
-        : 'No courses available yet.';
-      debug.ctxLen = ctx.length;
-      answer = await callGeminiAPI(question, ctx);
-      debug.source = 'gemini';
+      const catalog = courses && courses.length > 0
+        ? courses.map(c => `- ${c.name} [${c.category}]: ${c.description}`).join('\n')
+        : 'No courses in catalog yet.';
+      answer = await callGemini(question.trim(), catalog);
     } catch (e) {
-      debug.error = e.message;
-      console.error('[Gemini] Error:', e.message);
+      console.error('[Gemini Error]', e.message);
       answer = '';
     }
-  } else {
-    debug.error = 'No GEMINI_API_KEY';
   }
 
   if (!answer) {
-    answer = "I'm having trouble connecting to my AI brain right now. Please try again in a moment!";
+    answer = "Sorry, I'm unable to process your request right now. Please try again in a moment.";
   }
 
   try {
-    await supabase.from('queries').insert({ student: student || 'Anonymous', question, answer: answer.substring(0, 500) });
+    await supabase.from('queries').insert({ student: student || 'Anonymous', question: question.trim(), answer: answer.substring(0, 500) });
   } catch (e) {}
 
-  return corsResponse(200, { answer, courses: [], debug });
+  return corsResponse(200, { answer, courses: [] });
 }
 
 exports.handler = handleQuery;

@@ -1,6 +1,5 @@
 const { getSupabase } = require('./_lib/supabase');
 const { corsResponse, handleCors } = require('./_lib/cors');
-const https = require('https');
 
 async function callGeminiAPI(userMessage, courseContext) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -8,39 +7,26 @@ async function callGeminiAPI(userMessage, courseContext) {
 
   const systemPrompt = `You are NitinChatBot, a friendly course recommendation assistant. Recommend courses from the provided catalog. Respond in markdown. Be conversational and helpful like ChatGPT. Use emojis. If no courses match, give general advice.`;
 
-  const fullPrompt = `Course Catalog:\n${courseContext}\n\nUser: ${userMessage}`;
+  const fullPrompt = `${systemPrompt}\n\nCourse Catalog:\n${courseContext}\n\nUser: ${userMessage}\n\nAssistant:`;
 
   const payload = JSON.stringify({
     contents: [{ parts: [{ text: fullPrompt }] }],
-    systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
   });
 
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 25000,
-    }, (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.error) return reject(new Error(json.error.message || 'Gemini error'));
-          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return resolve(text);
-          reject(new Error('No text in Gemini response'));
-        } catch (e) { reject(e); }
-      });
-    });
-    req.on('timeout', () => { req.destroy(); reject(new Error('Gemini timeout')); });
-    req.on('error', reject);
-    req.write(payload);
-    req.end();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
   });
+
+  const json = await res.json();
+
+  if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
+  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('No text in response: ' + JSON.stringify(json).substring(0, 300));
+  return text;
 }
 
 async function handleQuery(event) {
@@ -54,20 +40,26 @@ async function handleQuery(event) {
   if (!question || !question.trim()) return corsResponse(400, { error: 'Question required' });
 
   const supabase = getSupabase();
-  const q = question.trim().toLowerCase();
   let answer = '';
+  let debug = {};
 
   if (process.env.GEMINI_API_KEY) {
+    debug.keyLen = process.env.GEMINI_API_KEY.length;
     try {
       const { data: courses } = await supabase.from('courses').select('name, description, category').limit(20);
       const ctx = courses && courses.length > 0
         ? courses.map(c => `- ${c.name} (${c.category}): ${c.description}`).join('\n')
         : 'No courses available yet.';
+      debug.ctxLen = ctx.length;
       answer = await callGeminiAPI(question, ctx);
+      debug.source = 'gemini';
     } catch (e) {
+      debug.error = e.message;
       console.error('[Gemini] Error:', e.message);
       answer = '';
     }
+  } else {
+    debug.error = 'No GEMINI_API_KEY';
   }
 
   if (!answer) {
@@ -76,9 +68,9 @@ async function handleQuery(event) {
 
   try {
     await supabase.from('queries').insert({ student: student || 'Anonymous', question, answer: answer.substring(0, 500) });
-  } catch (e) { console.error('Log error:', e); }
+  } catch (e) {}
 
-  return corsResponse(200, { answer, courses: [] });
+  return corsResponse(200, { answer, courses: [], debug });
 }
 
 exports.handler = handleQuery;
